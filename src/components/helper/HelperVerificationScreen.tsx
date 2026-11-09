@@ -15,8 +15,7 @@ import {
 } from 'lucide-react';
 
 export const HelperVerificationScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const { helper } = usePawsure();
-  const [consentAcknowledged, setConsentAcknowledged] = useState(helper.consentAgreed);
+  const { helper, helperConsent, updateHelperConsent } = usePawsure();
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-24">
@@ -156,26 +155,73 @@ export const HelperVerificationScreen: React.FC<{ onBack: () => void }> = ({ onB
           </div>
         </div>
 
-        {/* Caregiver Code of Conduct & Consent */}
-        <div className="p-4 rounded-2xl bg-[#FFF0E6] border border-[#EE8267]/30 space-y-2 text-xs">
+        {/* Caregiver Code of Conduct & Consent (PRD Rule 4) */}
+        <div className="p-4 rounded-2xl bg-[#FFF0E6] border border-[#EE8267]/30 space-y-3 text-xs">
           <div className="flex items-center justify-between">
             <span className="font-bold text-[#38223A]">Pawsure Caregiver Pledge & Consent</span>
-            <span className="text-[10px] text-gray-500">Jan 2026</span>
+            <span className="text-[10px] font-mono bg-white px-2 py-0.5 rounded border border-gray-200">
+              Status: {helperConsent.status.toUpperCase()}
+            </span>
           </div>
+
+          <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-[11px] text-gray-700 space-y-1">
+            <span className="font-bold text-[#EE8267] block">No Helper Face Photos Policy (Rule 4):</span>
+            <p>
+              Caregivers are <strong>never required to take face selfies</strong>. Evidence photos must only capture the pet, meal bowls, leashes, medication blister packs, or entry gate latches.
+            </p>
+          </div>
+
           <p className="text-gray-600 text-[11px] leading-relaxed">
             I pledge to follow all pet handling precautions, never use physical force, report all feeding and behavioral changes immediately, and submit authentic photo/GPS verification for every visit.
           </p>
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
-              id="consentCheck"
-              checked={consentAcknowledged}
-              onChange={(e) => setConsentAcknowledged(e.target.checked)}
-              className="rounded text-[#EE8267] focus:ring-[#EE8267]"
-            />
-            <label htmlFor="consentCheck" className="text-xs font-semibold text-[#38223A]">
-              Caregiver Consent & Code of Conduct Active
-            </label>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#EE8267]/20">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="consentCheck"
+                checked={helperConsent.agreed && helperConsent.status === 'active'}
+                onChange={(e) => {
+                  updateHelperConsent(e.target.checked, e.target.checked ? 'active' : 'paused');
+                }}
+                className="rounded text-[#EE8267] focus:ring-[#EE8267]"
+              />
+              <label htmlFor="consentCheck" className="text-xs font-semibold text-[#38223A]">
+                Caregiver Consent Active ({helperConsent.version})
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {helperConsent.status === 'active' ? (
+                <button
+                  type="button"
+                  onClick={() => updateHelperConsent(false, 'paused')}
+                  className="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-900 text-[10px] font-bold hover:bg-amber-200"
+                >
+                  Pause (Take Break)
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => updateHelperConsent(true, 'active')}
+                  className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-900 text-[10px] font-bold hover:bg-emerald-200"
+                >
+                  Resume Active
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Withdraw consent? You will be taken offline from active care assignments.')) {
+                    updateHelperConsent(false, 'withdrawn');
+                  }
+                }}
+                className="px-2.5 py-1 rounded-xl bg-rose-100 text-rose-900 text-[10px] font-bold hover:bg-rose-200"
+              >
+                Withdraw Consent
+              </button>
+            </div>
           </div>
         </div>
       </div>

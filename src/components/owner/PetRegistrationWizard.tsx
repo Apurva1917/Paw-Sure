@@ -78,6 +78,10 @@ export const PetRegistrationWizard: React.FC<PetRegistrationWizardProps> = ({
   const [fishTankLiters, setFishTankLiters] = useState(initialPet?.fishSpecifics?.tankVolumeLiters || 45);
   const [fishWaterTemp, setFishWaterTemp] = useState(initialPet?.fishSpecifics?.waterTemperatureC || 25);
 
+  const [otherHousing, setOtherHousing] = useState(initialPet?.otherSpecifics?.housingEnvironment || 'Enclosed ventilated terrarium');
+  const [otherDiet, setOtherDiet] = useState(initialPet?.otherSpecifics?.specialDietaryNeeds || 'Specialized species feed & fresh greens');
+  const [otherHandling, setOtherHandling] = useState(initialPet?.otherSpecifics?.handlingRisksNotes || 'Two-hand gentle support; avoid sudden overhead gestures');
+
   // Step 3: Behavior & Safety
   const [likesInput, setLikesInput] = useState(initialPet?.likes.join(', ') || 'Tennis ball fetch, ear scratches, tummy rubs');
   const [dislikesInput, setDislikesInput] = useState(initialPet?.dislikes.join(', ') || 'Vacuum cleaner, sudden fireworks, loud pressure cooker');
@@ -246,7 +250,8 @@ export const PetRegistrationWizard: React.FC<PetRegistrationWizardProps> = ({
       rabbitSpecifics: species === 'rabbit' ? { hayAccessType: rabbitHay as any, giStasisMonitoringNotes: rabbitGiNotes } : undefined,
       guineaPigSpecifics: species === 'guinea_pig' ? { vitaminCSupplement: gpVitaminC as any, beddingType: gpBedding as any } : undefined,
       birdSpecifics: species === 'bird' ? { cageCoverTime: birdCoverTime, outOfCageFlightHours: birdFlightHours } : undefined,
-      fishSpecifics: species === 'fish' ? { tankVolumeLiters: fishTankLiters, waterTemperatureC: fishWaterTemp } : undefined
+      fishSpecifics: species === 'fish' ? { tankVolumeLiters: fishTankLiters, waterTemperatureC: fishWaterTemp } : undefined,
+      otherSpecifics: species === 'other' ? { housingEnvironment: otherHousing, specialDietaryNeeds: otherDiet, handlingRisksNotes: otherHandling } : undefined
     };
 
     if (initialPet) {
@@ -316,16 +321,17 @@ export const PetRegistrationWizard: React.FC<PetRegistrationWizardProps> = ({
             {/* Species Selector (Dogs, Cats, Rabbits, Guinea Pigs, Birds, Fish, Other) */}
             <div>
               <label className="block text-xs font-semibold text-[#38223A] mb-1.5 uppercase">
-                Species (All 6 domestic categories supported)
+                Species (All 7 companion categories supported)
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-3 sm:grid-cols-7 gap-1.5">
                 {[
                   { id: 'dog', label: 'Dog 🐶' },
                   { id: 'cat', label: 'Cat 🐱' },
                   { id: 'rabbit', label: 'Rabbit 🐰' },
                   { id: 'guinea_pig', label: 'Guinea Pig 🐹' },
                   { id: 'bird', label: 'Bird 🦜' },
-                  { id: 'fish', label: 'Fish 🐠' }
+                  { id: 'fish', label: 'Fish 🐠' },
+                  { id: 'other', label: 'Other 🐾' }
                 ].map((s) => (
                   <button
                     type="button"
@@ -339,6 +345,7 @@ export const PetRegistrationWizard: React.FC<PetRegistrationWizardProps> = ({
                       else if (s.id === 'guinea_pig') setBreed('American Guinea Pig');
                       else if (s.id === 'bird') setBreed('Budgerigar (Budgie)');
                       else if (s.id === 'fish') setBreed('Betta (Siamese Fighting Fish)');
+                      else if (s.id === 'other') setBreed('Mixed / Exotic Species');
                     }}
                     className={`py-2 px-1 text-center rounded-2xl text-xs font-bold border transition ${
                       species === s.id
@@ -631,6 +638,48 @@ export const PetRegistrationWizard: React.FC<PetRegistrationWizardProps> = ({
                       className="w-full p-2 rounded-xl border border-gray-200 bg-white"
                     />
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* OTHER / EXOTIC SPECIES SPECIFICS */}
+            {species === 'other' && (
+              <div className="space-y-3 text-xs bg-[#FFF9F3] p-4 rounded-2xl border border-gray-200">
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] space-y-1">
+                  <span className="font-bold block">Caution for Alternative Companion Species:</span>
+                  <span>
+                    To ensure safe caregiving by assigned sitters, please specify exact enclosure security, environmental controls, and handling hazards.
+                  </span>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Housing / Enclosure Specifications</label>
+                  <input
+                    type="text"
+                    value={otherHousing}
+                    onChange={(e) => setOtherHousing(e.target.value)}
+                    placeholder="e.g. Temperature regulated terrarium, UV lighting timer"
+                    className="w-full p-2 rounded-xl border border-gray-200 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Specialized Dietary Requirements</label>
+                  <input
+                    type="text"
+                    value={otherDiet}
+                    onChange={(e) => setOtherDiet(e.target.value)}
+                    placeholder="e.g. Specific insect/greens schedule, fresh water misting"
+                    className="w-full p-2 rounded-xl border border-gray-200 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Handling Precautions & Bite/Stress Risks</label>
+                  <textarea
+                    rows={2}
+                    value={otherHandling}
+                    onChange={(e) => setOtherHandling(e.target.value)}
+                    placeholder="e.g. Two-hand gentle support; avoid sudden overhead gestures; notify if pet becomes skittish"
+                    className="w-full p-2 rounded-xl border border-gray-200 bg-white"
+                  />
                 </div>
               </div>
             )}

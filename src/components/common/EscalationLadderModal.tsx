@@ -163,6 +163,25 @@ export const EscalationLadderModal: React.FC<EscalationLadderModalProps> = ({
           </div>
         </div>
 
+        {/* SLA TIMERS & POLICIES (PRD v1.3 Rule 3) */}
+        <div className="p-3 rounded-2xl bg-gray-50 border border-gray-200 text-[11px] text-gray-600 space-y-1">
+          <div className="flex items-center justify-between font-bold text-gray-800">
+            <span>SLA & Friend Finder Timers (Timezone: Asia/Kolkata IST)</span>
+            <span className="font-mono text-[#EE8267]">Live Engine</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+            <span>• Friend Finder Expire: <strong>15 mins</strong></span>
+            <span>• Reminder Dispatch: <strong>8 mins</strong></span>
+            <span>• Provisional Sitter Hold: <strong>10 mins</strong></span>
+            <span>• Search Closes: <strong>30m before task</strong></span>
+            <span>• Helper No-Show SLA: <strong>Task + 20m</strong></span>
+            <span>• Explicit Ack: <strong>"I'm on it" required</strong></span>
+          </div>
+          <p className="text-[10px] text-rose-700 italic pt-1">
+            * Strict Rule: Message-read does NOT count as acknowledgement. Owner must explicitly commit action.
+          </p>
+        </div>
+
         {/* OWNER & ADMIN ACTION CONTROLS */}
         <div className="pt-3 border-t border-gray-100 flex flex-wrap gap-2 text-xs">
           {escalation.status === 'active' && (
@@ -170,18 +189,20 @@ export const EscalationLadderModal: React.FC<EscalationLadderModalProps> = ({
               {escalation.currentStage !== 'owner_acknowledged' && (
                 <button
                   onClick={() => ownerAcknowledgeEscalation(escalation.id)}
-                  className="flex-1 py-2.5 rounded-2xl bg-amber-500 text-black font-bold hover:bg-amber-400 shadow-xs"
+                  className="flex-1 py-2.5 rounded-2xl bg-amber-500 text-black font-bold hover:bg-amber-400 shadow-xs flex items-center justify-center gap-1.5"
                 >
-                  Step 4: Owner Acknowledge Alert
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>"I'm on it" (Explicit Ack)</span>
                 </button>
               )}
 
               {escalation.currentStage !== 'find_cover_suggested' && (
                 <button
                   onClick={() => ownerTriggerBackup(escalation.id)}
-                  className="flex-1 py-2.5 rounded-2xl bg-[#EE8267] text-white font-bold hover:bg-[#E26D50] shadow-xs"
+                  className="flex-1 py-2.5 rounded-2xl bg-[#EE8267] text-white font-bold hover:bg-[#E26D50] shadow-xs flex items-center justify-center gap-1.5"
                 >
-                  Step 6: Trigger Backup Sitter
+                  <Users className="w-4 h-4" />
+                  <span>Trigger Backup & Friend Finder</span>
                 </button>
               )}
 
@@ -199,7 +220,7 @@ export const EscalationLadderModal: React.FC<EscalationLadderModalProps> = ({
 
           {escalation.status === 'resolved' && (
             <div className="w-full text-center text-xs text-emerald-700 font-bold bg-emerald-50 py-2 rounded-2xl border border-emerald-200">
-              ✓ This escalation has been fully resolved and archived in the audit ledger.
+              ✓ This escalation has been fully resolved and archived in the audit ledger (Asia/Kolkata).
             </div>
           )}
         </div>

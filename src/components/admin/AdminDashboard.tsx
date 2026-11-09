@@ -26,7 +26,8 @@ import {
   FastForward,
   BellRing,
   Send,
-  Eye
+  Eye,
+  Building2
 } from 'lucide-react';
 
 type AdminTab =
@@ -34,6 +35,7 @@ type AdminTab =
   | 'households'
   | 'pets'
   | 'helpers'
+  | 'facility_audits'
   | 'onboarding_consent'
   | 'identity_kyc'
   | 'telephony_ivr'
@@ -61,7 +63,8 @@ export const AdminDashboard: React.FC = () => {
     simulatedClock,
     advanceSimulatedTime,
     adminSetTaskStatus,
-    resolveEscalation
+    resolveEscalation,
+    facilityAudits
   } = usePawsure();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -84,6 +87,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'households', label: 'Household & Owners', icon: Home },
     { id: 'pets', label: 'Pet Profiles & Care Cards', count: pets.length, icon: PawPrint },
     { id: 'helpers', label: 'Caretakers & References', count: 1, icon: Users },
+    { id: 'facility_audits', label: '100-Pt Facility Audits', count: facilityAudits.length, icon: Building2 },
     { id: 'onboarding_consent', label: 'Onboarding & Consent', icon: FileCheck },
     { id: 'identity_kyc', label: 'Identity & Masked KYC', icon: Lock },
     { id: 'disputes', label: 'Disputes & Reviews', count: disputedReviews.length, icon: Scale },
@@ -529,6 +533,120 @@ export const AdminDashboard: React.FC = () => {
               </div>
             )}
 
+            {/* FACILITY AUDITS (100-POINT RUBRIC GATE) */}
+            {activeTab === 'facility_audits' && (
+              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xs space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
+                  <div>
+                    <h1 className="font-heading text-xl font-bold text-[#38223A]">
+                      Crèche Facility 100-Point Audit Ledger ({facilityAudits.length})
+                    </h1>
+                    <p className="text-xs text-gray-500">
+                      Marketplace P1 Gate: Facilities must score 85+ (Grade A) and have ZERO safety redline failures.
+                    </p>
+                  </div>
+                  <span className="text-[10px] bg-purple-100 text-purple-800 font-bold px-3 py-1 rounded-full self-start sm:self-auto">
+                    PRD v1.3 Standard Rubric
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {facilityAudits.map((facility) => (
+                    <div
+                      key={facility.id}
+                      className={`p-5 rounded-3xl border transition-all ${
+                        facility.safetyRedlineFailed
+                          ? 'bg-rose-50/60 border-2 border-rose-300'
+                          : 'bg-[#FFF9F3] border-gray-200'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-gray-200/70">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-bold text-lg ${
+                              facility.safetyRedlineFailed
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-purple-700 text-white'
+                            }`}
+                          >
+                            {facility.grade}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h2 className="font-heading font-bold text-base text-[#38223A]">
+                                {facility.facilityName}
+                              </h2>
+                              <span
+                                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                                  facility.safetyRedlineFailed
+                                    ? 'bg-rose-600 text-white'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}
+                              >
+                                {facility.safetyRedlineFailed
+                                  ? 'BLOCKED: SAFETY REDLINE FAILED'
+                                  : `APPROVED (Score: ${facility.totalScore}/100)`}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 font-mono mt-0.5">
+                              Operator: {facility.operatorName} ({facility.operatorPhone}) · {facility.locality}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="text-xs font-bold text-[#38223A] block">
+                            Capacity: {facility.capacityMaxPets} pets
+                          </span>
+                          <span className="text-[10px] text-gray-500">
+                            Staff: {facility.currentStaffCount} handlers
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 100-Point Breakdown Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 text-xs">
+                        <div className="p-2 bg-white rounded-xl border border-gray-100">
+                          <span className="text-gray-400 block text-[10px]">1. Physical Safety (20)</span>
+                          <strong className={facility.safety20 < 15 ? 'text-rose-600' : 'text-gray-800'}>
+                            {facility.safety20} / 20 pts
+                          </strong>
+                        </div>
+                        <div className="p-2 bg-white rounded-xl border border-gray-100">
+                          <span className="text-gray-400 block text-[10px]">2. Health Protocols (15)</span>
+                          <strong className="text-gray-800">{facility.health15} / 15 pts</strong>
+                        </div>
+                        <div className="p-2 bg-white rounded-xl border border-gray-100">
+                          <span className="text-gray-400 block text-[10px]">3. Staff Ratio 1:4 (15)</span>
+                          <strong className="text-gray-800">{facility.staff15} / 15 pts</strong>
+                        </div>
+                        <div className="p-2 bg-white rounded-xl border border-gray-100">
+                          <span className="text-gray-400 block text-[10px]">4. Space & Zones (15)</span>
+                          <strong className="text-gray-800">{facility.spacePlay15} / 15 pts</strong>
+                        </div>
+                      </div>
+
+                      {/* Redline failure warning box if failed */}
+                      {facility.safetyRedlineFailed && (
+                        <div className="mt-3 p-3 rounded-2xl bg-rose-100/80 border border-rose-300 text-xs text-rose-950 space-y-1">
+                          <strong className="block font-bold">Unconditional Redline Failure:</strong>
+                          <p>{facility.safetyRedlineReasons.join('; ')}</p>
+                          <span className="text-[10px] text-rose-800 italic block">
+                            Platform Rule: This facility cannot be booked by pet owners until a physical re-audit verifies double-gate latching.
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="mt-3 pt-2 border-t border-gray-200/60 flex items-center justify-between text-[11px] text-gray-500">
+                        <span>Audited by: {facility.auditorId} on {facility.auditDate}</span>
+                        <span>Vet Contract: {facility.vetSignOff.vetName} ({facility.vetSignOff.clinicName})</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 9. EVIDENCE REVIEW */}
             {activeTab === 'reviews' && (
               <div className="space-y-4">
@@ -612,22 +730,103 @@ export const AdminDashboard: React.FC = () => {
             {/* 11. NOTIFICATIONS DELIVERY */}
             {activeTab === 'notifications' && (
               <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xs space-y-4">
-                <h1 className="font-heading text-xl font-bold text-[#38223A]">
-                  Simulated Notification Dispatch Ledger
-                </h1>
-                <div className="space-y-2 text-xs font-mono">
-                  <div className="p-3 rounded-2xl bg-[#FFF9F3] border border-gray-200 flex justify-between">
-                    <span>SMS to Sunita (+91 98765 43210): "Midday Potty check due in 15m"</span>
-                    <span className="text-emerald-700 font-bold">DELIVERED</span>
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                  <div>
+                    <h1 className="font-heading text-xl font-bold text-[#38223A]">
+                      Notification Dispatch Ledger (5 Discrete Delivery States)
+                    </h1>
+                    <p className="text-xs text-gray-500">
+                      Tracking: Queued → Sent → Delivered → Acknowledged / Failed (Asia/Kolkata).
+                    </p>
                   </div>
-                  <div className="p-3 rounded-2xl bg-[#FFF9F3] border border-gray-200 flex justify-between">
-                    <span>Push to Neha Kapoor: "Care gap alert: Midday task not confirmed"</span>
-                    <span className="text-emerald-700 font-bold">ACKNOWLEDGED</span>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-[#FFF9F3] border border-gray-200 flex justify-between">
-                    <span>Neighborhood broadcast to 3 friends: "Backup sitter request"</span>
-                    <span className="text-emerald-700 font-bold">DISPATCHED</span>
-                  </div>
+                  <span className="text-[10px] font-mono bg-gray-100 text-gray-700 font-bold px-2.5 py-0.5 rounded-full">
+                    Idempotent Dispatch
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 text-xs font-mono">
+                  {[
+                    {
+                      id: 'notif-1',
+                      time: '01:30 PM IST',
+                      to: 'Sunita (+91 98765 43210)',
+                      channel: 'SMS',
+                      type: 'Task Due Reminder',
+                      status: 'delivered',
+                      detail: 'Midday relief check scheduled window now active'
+                    },
+                    {
+                      id: 'notif-2',
+                      time: '02:00 PM IST',
+                      to: 'Neha Kapoor (+91 98450 11223)',
+                      channel: 'Push Notification',
+                      type: 'Care Gap Escalation',
+                      status: 'acknowledged',
+                      detail: 'Owner explicit "I\'m on it" action recorded at 02:16 PM'
+                    },
+                    {
+                      id: 'notif-3',
+                      time: '02:15 PM IST',
+                      to: 'Rohit & Friends Circle (3 recipients)',
+                      channel: 'WhatsApp / SMS',
+                      type: 'Backup Alert',
+                      status: 'sent',
+                      detail: 'Backup standby broadcast dispatched within 1.5km radius'
+                    },
+                    {
+                      id: 'notif-4',
+                      time: '02:25 PM IST',
+                      to: 'Pooja Reddy (+91 98451 22334)',
+                      channel: 'In-App Direct',
+                      type: 'Friend Finder Offer',
+                      status: 'queued',
+                      detail: 'Hold timer active (10 mins provisional reserve)'
+                    },
+                    {
+                      id: 'notif-5',
+                      time: '01:45 PM IST',
+                      to: 'Carrier Gateway +91 91234 56789',
+                      channel: 'SMS Gateway',
+                      type: 'Secondary Sitter Ping',
+                      status: 'failed',
+                      detail: 'Carrier network timeout; fallback to push attempted'
+                    }
+                  ].map((n) => (
+                    <div
+                      key={n.id}
+                      className="p-3.5 rounded-2xl bg-[#FFF9F3] border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 font-bold text-[11px]">{n.time}</span>
+                          <span className="text-gray-300">·</span>
+                          <span className="font-bold text-[#38223A]">{n.type}</span>
+                          <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.2 rounded font-sans font-bold">
+                            {n.channel}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-700 font-sans">
+                          To: <strong>{n.to}</strong> — {n.detail}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`self-start sm:self-auto px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider ${
+                          n.status === 'acknowledged'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : n.status === 'delivered'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                            : n.status === 'sent'
+                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                            : n.status === 'queued'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : 'bg-rose-100 text-rose-800 border border-rose-200'
+                        }`}
+                      >
+                        {n.status.toUpperCase()}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

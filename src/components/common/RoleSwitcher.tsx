@@ -1,7 +1,7 @@
 import React from 'react';
 import { usePawsure } from '../../context/PawsureContext';
 import { Role } from '../../types/pawsure';
-import { User, HeartHandshake, ShieldCheck, RotateCcw, LogOut } from 'lucide-react';
+import { User, HeartHandshake, Building2, ShieldCheck, RotateCcw, LogOut } from 'lucide-react';
 
 export const RoleSwitcher: React.FC = () => {
   const { role, setRole, resetDemoData, tasks, escalations, auth, logout } = usePawsure();
@@ -23,6 +23,12 @@ export const RoleSwitcher: React.FC = () => {
       icon: HeartHandshake
     },
     {
+      id: 'creche_operator',
+      label: 'Crèche Operator',
+      sub: 'Happy Paws Daycare',
+      icon: Building2
+    },
+    {
       id: 'admin',
       label: 'Admin Console',
       sub: 'Audits & Escalations',
@@ -34,9 +40,12 @@ export const RoleSwitcher: React.FC = () => {
     <aside aria-label="Demo role selector" className="bg-[#38223A] text-white border-b border-white/10 px-3 py-2 text-xs">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
+          <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[9px] font-mono px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+            DEMO ONLY
+          </span>
           <span className="font-heading font-semibold text-white/90 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#EE8267]"></span>
-            Demo Role:
+            Test Role:
           </span>
           <div className="flex items-center gap-1 bg-white/10 p-0.5 rounded-full">
             {roles.map((r) => {

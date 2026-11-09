@@ -3,6 +3,7 @@ import {
   Role,
   Pet,
   CareTask,
+  CareEvidence,
   HelperProfile,
   FriendContact,
   EscalationItem,
@@ -15,8 +16,17 @@ import {
   MissedCallOrIVRLog,
   OwnerRewardAccount,
   CaregiverRating,
-  AuthUser
+  AuthUser,
+  Household,
+  FacilityAudit,
+  MarketplaceListing,
+  BookingRequest,
+  OwnerReturnCheck,
+  HelperConsent
 } from '../types/pawsure';
+import { PawsureVerificationEngine } from '../services/verificationEngine';
+import { pawsureRepository } from '../services/pawsureRepository';
+import { providerAdapters } from '../services/providerAdapters';
 import {
   INITIAL_PETS,
   INITIAL_HELPER,
@@ -36,8 +46,20 @@ interface PawsureContextType {
   auth: AuthUser;
   loginOwner: (phone: string, otp: string) => boolean;
   loginHelper: (phone: string, lang: 'en' | 'hi' | 'kn' | 'ta', mode: 'smartphone' | 'basic_phone', consent: boolean) => boolean;
+  loginCrecheOperator: (facilityId: string, operatorPhone: string, managerName: string) => boolean;
   loginAdmin: (staffId: string, securityKey: string, mfaCode: string) => boolean;
   logout: () => void;
+
+  household: Household;
+  facilityAudits: FacilityAudit[];
+  marketplaceListings: MarketplaceListing[];
+  bookingRequests: BookingRequest[];
+  returnChecks: OwnerReturnCheck[];
+  helperConsent: HelperConsent;
+  submitOwnerReturnCheck: (check: Omit<OwnerReturnCheck, 'id'>) => void;
+  updateHelperConsent: (agreed: boolean, status?: 'active' | 'withdrawn' | 'paused') => void;
+  submitBookingRequest: (req: Omit<BookingRequest, 'id' | 'createdAt' | 'status' | 'paymentStatus'>) => void;
+  updateBookingStatus: (id: string, status: 'accepted' | 'declined') => void;
 
   pets: Pet[];
   activePetId: string;
@@ -130,12 +152,42 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setAuth((prev) => ({
       ...prev,
       role: newRole,
-      userId: newRole === 'owner' ? 'owner-neha-1' : newRole === 'helper' ? 'helper-sunita-1' : 'admin-operator-1',
-      name: newRole === 'owner' ? 'Neha Kapoor' : newRole === 'helper' ? 'Sunita Sharma' : 'Platform Operations Admin',
-      phone: newRole === 'owner' ? '+91 98450 11223' : newRole === 'helper' ? '+91 98765 43210' : undefined,
+      userId:
+        newRole === 'owner'
+          ? 'owner-neha-1'
+          : newRole === 'helper'
+          ? 'helper-sunita-1'
+          : newRole === 'creche_operator'
+          ? 'op-creche-blr-01'
+          : 'admin-operator-1',
+      name:
+        newRole === 'owner'
+          ? 'Neha Kapoor'
+          : newRole === 'helper'
+          ? 'Sunita Sharma'
+          : newRole === 'creche_operator'
+          ? 'Arjun Mehta (Happy Paws)'
+          : 'Platform Operations Admin',
+      phone:
+        newRole === 'owner'
+          ? '+91 98450 11223'
+          : newRole === 'helper'
+          ? '+91 98765 43210'
+          : newRole === 'creche_operator'
+          ? '+91 99001 22334'
+          : undefined,
+      facilityId: newRole === 'creche_operator' ? 'creche-blr-01' : undefined,
       email: newRole === 'admin' ? 'ops.lead@pawsure.internal' : undefined
     }));
   };
+
+  // Strict Scoped Repository States
+  const [household, setHousehold] = useState<Household>(() => pawsureRepository.getState().households[0]);
+  const [facilityAudits, setFacilityAudits] = useState<FacilityAudit[]>(() => pawsureRepository.getState().facilityAudits);
+  const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>(() => pawsureRepository.getState().marketplaceListings);
+  const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>(() => pawsureRepository.getState().bookingRequests);
+  const [returnChecks, setReturnChecks] = useState<OwnerReturnCheck[]>(() => pawsureRepository.getState().returnChecks);
+  const [helperConsent, setHelperConsent] = useState<HelperConsent>(() => pawsureRepository.getState().helperConsents[0]);
 
   const [pets, setPets] = useState<Pet[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_pets`);
@@ -243,7 +295,7 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     actorRole: Role | 'system',
     action: string,
     details: string,
-    category: 'verification' | 'safety' | 'auth' | 'task' | 'telephony' | 'rewards'
+    category: AuditLogItem['category']
   ) => {
     const newLog: AuditLogItem = {
       id: `log-${Date.now()}`,
@@ -332,6 +384,100 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addAuditLog('User', role, 'Logged Out', 'Session terminated', 'auth');
   };
 
+  const loginCrecheOperator = (facilityId: string, operatorPhone: string, managerName: string): boolean => {
+    const session: AuthUser = {
+      isAuthenticated: true,
+      role: 'creche_operator',
+      userId: `op-${facilityId || 'creche-blr-01'}`,
+      name: managerName || 'Arjun Mehta',
+      phone: operatorPhone || '+91 99001 22334',
+      facilityId: facilityId || 'creche-blr-01'
+    };
+    setAuth(session);
+    setRoleState('creche_operator');
+    addAuditLog(
+      managerName || 'Arjun Mehta',
+      'creche_operator',
+      'Crèche Operator Authenticated',
+      `Signed in to manage facility #${facilityId || 'creche-blr-01'}.`,
+      'auth'
+    );
+    return true;
+  };
+
+  const submitOwnerReturnCheck = (checkData: Omit<OwnerReturnCheck, 'id'>) => {
+    const newCheck: OwnerReturnCheck = {
+      id: `ret-${Date.now()}`,
+      ...checkData
+    };
+    setReturnChecks((prev) => [newCheck, ...prev]);
+    // If matched, mark tasks matched (covered day, no points per PRD)
+    if (checkData.inspectionMatchesReportedTasks) {
+      setTasks((prev) =>
+        prev.map((t) => (t.status === 'confirmed' || t.status === 'likely' ? { ...t, status: 'matched' as const } : t))
+      );
+    }
+    addAuditLog(
+      'Neha Kapoor',
+      'owner',
+      'Owner Return Check Completed',
+      `Physical return inspection recorded. Demeanor: ${checkData.petDemeanor}. Dispute flagged: ${checkData.disputeFlagged ? 'YES' : 'NO'}.`,
+      'verification'
+    );
+  };
+
+  const updateHelperConsent = (agreed: boolean, status: 'active' | 'withdrawn' | 'paused' = 'active') => {
+    setHelperConsent((prev) => ({
+      ...prev,
+      agreed,
+      status,
+      timestamp: `${simulatedClock} Today`
+    }));
+    setHelper((prev) => ({
+      ...prev,
+      consentAgreed: agreed,
+      status: status === 'active' ? 'active' : 'on_break'
+    }));
+    addAuditLog(
+      helper.name,
+      'helper',
+      `Helper Consent ${status.toUpperCase()}`,
+      `Caregiver consent updated to ${status}. Agreement: ${agreed ? 'YES' : 'NO'}.`,
+      'safety'
+    );
+  };
+
+  const submitBookingRequest = (req: Omit<BookingRequest, 'id' | 'createdAt' | 'status' | 'paymentStatus'>) => {
+    const newReq: BookingRequest = {
+      ...req,
+      id: `book-${Date.now()}`,
+      createdAt: `${simulatedClock} Today`,
+      status: 'requested_pending',
+      paymentStatus: 'SIMULATED_PENDING_ESCROW'
+    };
+    setBookingRequests((prev) => [newReq, ...prev]);
+    addAuditLog(
+      'Neha Kapoor',
+      'owner',
+      'Booking Request Created (Pending Approval)',
+      `Requested care with ${req.providerName} for ${req.totalInr} INR (Simulated Escrow).`,
+      'facility'
+    );
+  };
+
+  const updateBookingStatus = (id: string, status: 'accepted' | 'declined') => {
+    setBookingRequests((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status } : b))
+    );
+    addAuditLog(
+      'Provider Operator',
+      role,
+      `Booking Request ${status.toUpperCase()}`,
+      `Booking #${id} updated to ${status}.`,
+      'facility'
+    );
+  };
+
   // Phase 3: Daily Care Handover Management
   const createOrUpdateHandover = (data: Partial<DailyCareHandover>) => {
     const diffs: string[] = [];
@@ -366,6 +512,8 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } else {
       const newHandover: DailyCareHandover = {
         id: `handover-${Date.now()}`,
+        householdId: activePet.householdId || 'hh-neha-1',
+        version: 1,
         petId: activePet.id,
         date: '2026-11-07',
         createdAt: simulatedClock,
@@ -542,45 +690,74 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setTasks((prev) =>
         prev.map((t) => {
           if (t.id === targetTask.id) {
+            const newEv: CareEvidence = {
+              id: `ev-ivr-${Date.now()}`,
+              type: 'ivr_keypad',
+              caption: `IVR Keypad entry confirmed with household security passcode (${code})`,
+              timestamp: simulatedClock,
+              confidenceScore: 90,
+              verifiedBy: 'system',
+              isVisitProofOnly: false,
+              enteredCode: code,
+              channelIdentifier: 'dtmf_ivr_security_passcode'
+            };
+            const updatedEvidence = [...t.evidence, newEv];
+            const evalResult = PawsureVerificationEngine.evaluateTaskEvidence(
+              { ...t, evidence: updatedEvidence },
+              activePet.securityHomeCode || '4829'
+            );
             return {
               ...t,
-              status: 'confirmed',
+              status: evalResult.status,
               helperMarkedDone: true,
               completedAt: simulatedClock,
-              evidence: [
-                ...t.evidence,
-                {
-                  id: `ev-ivr-${Date.now()}`,
-                  type: 'ivr_keypad',
-                  caption: `IVR Keypad entry confirmed with household security passcode`,
-                  timestamp: simulatedClock,
-                  confidenceScore: 100,
-                  verifiedBy: 'system',
-                  isVisitProofOnly: false
-                }
-              ]
+              evidence: updatedEvidence
             };
           }
           return t;
         })
       );
 
-      // Reward points update for owner on real confirmed completion
+      // Reward pilot points: 5 points per PRD pilot specification
       setRewards((prev) => ({
         ...prev,
-        pointsBalance: prev.pointsBalance + 20,
-        pendingPoints: Math.max(0, prev.pendingPoints - 20)
+        pointsBalance: Math.min(prev.pointsBalance + 5, 125 * 6),
+        monthlyEarned: Math.min((prev.monthlyEarned || 0) + 5, 125),
+        pendingPoints: Math.max(0, prev.pendingPoints - 5)
       }));
 
       addAuditLog(
         helper.name,
         'helper',
-        'IVR Task Verified as Confirmed',
-        `Task "${targetTask.title}" confirmed via IVR telephone passcode. Points rewarded.`,
+        'IVR Task Verified',
+        `Task "${targetTask.title}" processed via IVR passcode. Evaluated status: ${targetTask.evidence.some(e => e.isVisitProofOnly) ? 'CONFIRMED (2 channels)' : 'LIKELY (1 channel)'}. Points awarded: +5.`,
         'telephony'
       );
       return true;
     } else {
+      // Record failed passcode contradiction
+      setTasks((prev) =>
+        prev.map((t) => {
+          if (t.id === targetTask.id) {
+            const badEv: CareEvidence = {
+              id: `ev-ivr-bad-${Date.now()}`,
+              type: 'ivr_keypad',
+              caption: `Invalid IVR code attempted: "${code}"`,
+              timestamp: simulatedClock,
+              confidenceScore: 10,
+              verifiedBy: 'system',
+              isVisitProofOnly: false,
+              enteredCode: code
+            };
+            return {
+              ...t,
+              status: 'not_confirmed' as const,
+              evidence: [...t.evidence, badEv]
+            };
+          }
+          return t;
+        })
+      );
       addAuditLog(
         helper.name,
         'helper',
@@ -734,8 +911,10 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newReview: CaregiverRating = {
       id: `rev-${Date.now()}`,
       taskId,
+      householdId: activePet.householdId || 'hh-neha-1',
       petName: activePet.name,
       ownerName: 'Neha Kapoor',
+      helperId: helper.id,
       ratingStars,
       feedbackText,
       date: '2026-11-07',
@@ -909,50 +1088,58 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     evidenceType: 'photo' | 'voice' | 'code' | 'ivr_keypad',
     details: { url?: string; caption?: string; code?: string }
   ) => {
-    let newStatus: VerificationStatus = 'likely';
-    let confidence = 80;
-
-    if (evidenceType === 'photo') {
-      newStatus = 'confirmed';
-      confidence = 96;
-    } else if (evidenceType === 'code' || evidenceType === 'ivr_keypad') {
-      if (details.code === activePet.securityHomeCode || details.code === '4829') {
-        newStatus = 'confirmed';
-        confidence = 100;
-      }
-    }
+    let wasVerified = false;
+    let finalStatusDesc = 'Likely';
 
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
-          const newEv = {
+          const newEv: CareEvidence = {
             id: `ev-${Date.now()}`,
             type: evidenceType,
             url: details.url,
             caption: details.caption || `${evidenceType} evidence submitted`,
             timestamp: simulatedClock,
             verifiedBy: 'system' as const,
-            confidenceScore: confidence,
-            isVisitProofOnly: false
+            confidenceScore: evidenceType === 'photo' ? 96 : 80,
+            isVisitProofOnly: false,
+            enteredCode: details.code,
+            channelIdentifier:
+              evidenceType === 'photo'
+                ? 'visual_photo_evidence'
+                : evidenceType === 'voice'
+                ? 'audio_voice_report'
+                : 'dtmf_ivr_security_passcode'
           };
+          const updatedEvidence = [...t.evidence, newEv];
+          const evalResult = PawsureVerificationEngine.evaluateTaskEvidence(
+            { ...t, evidence: updatedEvidence },
+            activePet.securityHomeCode || '4829'
+          );
+          if (evalResult.status === 'confirmed' || evalResult.status === 'likely') {
+            wasVerified = true;
+          }
+          finalStatusDesc = evalResult.status;
+
           return {
             ...t,
             helperMarkedDone: true,
-            status: newStatus,
+            status: evalResult.status,
             completedAt: t.completedAt || simulatedClock,
-            evidence: [...t.evidence, newEv]
+            evidence: updatedEvidence
           };
         }
         return t;
       })
     );
 
-    // If verified, reward points
-    if (newStatus === 'confirmed') {
+    // Reward points: +5 per PRD pilot specification for confirmed/likely
+    if (wasVerified) {
       setRewards((prev) => ({
         ...prev,
-        pointsBalance: prev.pointsBalance + 20,
-        pendingPoints: Math.max(0, prev.pendingPoints - 20)
+        pointsBalance: Math.min(prev.pointsBalance + 5, 125 * 6),
+        monthlyEarned: Math.min((prev.monthlyEarned || 0) + 5, 125),
+        pendingPoints: Math.max(0, prev.pendingPoints - 5)
       }));
     }
 
@@ -960,7 +1147,7 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       helper.name,
       'helper',
       `Evidence Submitted (${evidenceType.toUpperCase()})`,
-      `Submitted ${evidenceType} for task. Confidence score: ${confidence}%. Status upgraded to "${newStatus}".`,
+      `Submitted ${evidenceType} for task. Status evaluated as "${finalStatusDesc}".`,
       'verification'
     );
   };
@@ -1144,8 +1331,19 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
         auth,
         loginOwner,
         loginHelper,
+        loginCrecheOperator,
         loginAdmin,
         logout,
+        household,
+        facilityAudits,
+        marketplaceListings,
+        bookingRequests,
+        returnChecks,
+        helperConsent,
+        submitOwnerReturnCheck,
+        updateHelperConsent,
+        submitBookingRequest,
+        updateBookingStatus,
         pets,
         activePetId,
         setActivePetId,

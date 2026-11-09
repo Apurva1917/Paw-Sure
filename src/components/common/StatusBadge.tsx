@@ -51,6 +51,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, showIcon = tru
       borderClass: 'border-purple-200',
       icon: Clock,
       description: 'Scheduled for later today'
+    },
+    matched: {
+      label: 'Matched (Return Check)',
+      colorClass: 'text-blue-700',
+      bgClass: 'bg-blue-50',
+      borderClass: 'border-blue-200',
+      icon: CheckCircle2,
+      description: 'Physical inspection upon owner return verified day care. Status: Matched (covered day, no points).'
     }
   };
 

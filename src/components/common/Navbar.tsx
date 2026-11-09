@@ -12,6 +12,7 @@ import {
   History,
   Heart,
   FileText,
+  User,
   Gift,
   LogOut
 } from 'lucide-react';
@@ -27,14 +28,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenR
 
   const navLinks = [
     { id: 'today', label: 'Today', icon: Calendar },
-    { id: 'handover', label: 'Daily Handover', icon: FileText },
     { id: 'pets', label: 'Pet Profile', icon: PawPrint },
     { id: 'routine', label: 'Routine', icon: Clock },
-    { id: 'rewards', label: 'Rewards & Pilot', icon: Gift },
+    { id: 'handover', label: 'Handover', icon: FileText },
     { id: 'find-cover', label: 'Find Cover', icon: Search },
     { id: 'friends', label: 'Friends', icon: Users },
+    { id: 'history', label: 'History', icon: History },
+    { id: 'rewards', label: 'Rewards', icon: Gift },
     { id: 'emergency', label: 'Emergency', icon: ShieldAlert },
-    { id: 'history', label: 'History', icon: History }
+    { id: 'me', label: 'Me', icon: User }
   ];
 
   return (
@@ -113,13 +115,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenR
           aria-label="Mobile Bottom Navigation"
           className="xl:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200/80 shadow-lg px-2 pb-safe"
         >
-          <div className="grid grid-cols-5 items-center h-16 max-w-md mx-auto">
+          <div className="grid grid-cols-6 items-center h-16 max-w-lg mx-auto">
             {[
               { id: 'today', label: 'Today', icon: Calendar },
               { id: 'handover', label: 'Handover', icon: FileText },
               { id: 'pets', label: 'Profile', icon: PawPrint },
-              { id: 'rewards', label: 'Rewards', icon: Gift },
-              { id: 'emergency', label: 'Emergency', icon: ShieldAlert }
+              { id: 'find-cover', label: 'Cover', icon: Search },
+              { id: 'emergency', label: 'Emergency', icon: ShieldAlert },
+              { id: 'me', label: 'Me', icon: User }
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = currentTab === tab.id;

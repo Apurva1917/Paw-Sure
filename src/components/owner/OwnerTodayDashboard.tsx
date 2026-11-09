@@ -21,7 +21,11 @@ import {
   Compass,
   PhoneCall,
   Gift,
-  FastForward
+  FastForward,
+  ClipboardCheck,
+  ThumbsUp,
+  ThumbsDown,
+  Info
 } from 'lucide-react';
 
 interface OwnerTodayDashboardProps {
@@ -48,8 +52,19 @@ export const OwnerTodayDashboard: React.FC<OwnerTodayDashboardProps> = ({
     rewards,
     escalations,
     simulatedClock,
-    advanceSimulatedTime
+    advanceSimulatedTime,
+    household,
+    returnChecks,
+    submitOwnerReturnCheck
   } = usePawsure();
+
+  const [returnWaterFilled, setReturnWaterFilled] = useState(true);
+  const [returnFoodMatches, setReturnFoodMatches] = useState(true);
+  const [returnReliefNoted, setReturnReliefNoted] = useState(true);
+  const [returnDemeanor, setReturnDemeanor] = useState<'calm_happy' | 'anxious' | 'distressed'>('calm_happy');
+  const [returnInspectionMatches, setReturnInspectionMatches] = useState(true);
+  const [returnDisputeNotes, setReturnDisputeNotes] = useState('');
+  const [returnCheckSubmitted, setReturnCheckSubmitted] = useState(false);
 
   const [selectedEvidenceTask, setSelectedEvidenceTask] = useState<CareTask | null>(null);
   const [showCheatSheet, setShowCheatSheet] = useState(false);
@@ -272,6 +287,27 @@ export const OwnerTodayDashboard: React.FC<OwnerTodayDashboardProps> = ({
       )}
 
       {/* Caretaker Check-in Status Card (Showing Basic Phone vs GPS) */}
+      {(helper.interfaceMode === 'basic_phone' || checkInMethod === 'basic_phone_missed_call') && (
+        <div className="rounded-3xl bg-amber-50/90 border-2 border-amber-300 p-4 shadow-xs flex items-start gap-3">
+          <div className="p-2 rounded-2xl bg-amber-100 text-amber-700 shrink-0">
+            <AlertCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-heading font-bold text-sm text-amber-950">
+                Basic-Phone / IVR Verification Policy
+              </h3>
+              <span className="text-[10px] font-mono bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+                Visit Arrival Only
+              </span>
+            </div>
+            <p className="text-xs text-amber-900 mt-1 leading-relaxed">
+              This helper uses phone/IVR check-ins. A call registers visit presence at the residence, but <strong>does not verify feeding, walking, or medication</strong> without photo or keyed passcode evidence.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-3xl bg-white p-5 border border-[#38223A]/10 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -467,6 +503,208 @@ export const OwnerTodayDashboard: React.FC<OwnerTodayDashboardProps> = ({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* OWNER RETURN PHYSICAL INSPECTION CHECKLIST (PRD Rule 2) */}
+      <div className="rounded-3xl bg-white p-5 border border-[#EE8267]/20 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#EE8267] to-[#A78BFA] flex items-center justify-center text-white shadow-xs">
+              <ClipboardCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-heading font-bold text-base text-[#38223A]">
+                  Owner Return Physical Inspection
+                </h3>
+                <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded-full">
+                  Post-Care Verification
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">
+                Inspect physical evidence at home upon return. Matched checks confirm covered day (no extra points).
+              </p>
+            </div>
+          </div>
+
+          {returnChecks.some((c) => c.petId === activePet.id) && (
+            <span className="self-start sm:self-auto px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
+              ✓ Inspection Completed Today
+            </span>
+          )}
+        </div>
+
+        {returnChecks.some((c) => c.petId === activePet.id) ? (
+          <div className="p-4 rounded-2xl bg-[#FFF9F3] border border-gray-200 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[#38223A]">Latest Inspection Log:</span>
+              <span className="font-mono text-gray-500 text-[11px]">
+                {returnChecks.find((c) => c.petId === activePet.id)?.inspectedAt}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
+              <div className="p-2 bg-white rounded-xl border border-gray-100">
+                <span className="text-gray-400 block text-[10px]">Water Bowl</span>
+                <strong className="text-emerald-700">✓ Filled Fresh</strong>
+              </div>
+              <div className="p-2 bg-white rounded-xl border border-gray-100">
+                <span className="text-gray-400 block text-[10px]">Food Portion</span>
+                <strong className="text-emerald-700">✓ Matched</strong>
+              </div>
+              <div className="p-2 bg-white rounded-xl border border-gray-100">
+                <span className="text-gray-400 block text-[10px]">Relief / Walk</span>
+                <strong className="text-emerald-700">✓ Verified</strong>
+              </div>
+              <div className="p-2 bg-white rounded-xl border border-gray-100">
+                <span className="text-gray-400 block text-[10px]">Demeanor</span>
+                <strong className="text-emerald-700">Calm & Happy</strong>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-500 pt-1 italic">
+              Tasks transitioned to <strong>Matched</strong> status. Day is verified covered.
+            </p>
+          </div>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitOwnerReturnCheck({
+                householdId: household.id,
+                petId: activePet.id,
+                date: '2026-11-07',
+                inspectedAt: `${simulatedClock} Today`,
+                waterBowlFilled: returnWaterFilled,
+                foodBowlMatchesPortion: returnFoodMatches,
+                dogReliefWalkNoted: returnReliefNoted,
+                petDemeanor: returnDemeanor,
+                inspectionMatchesReportedTasks: returnInspectionMatches,
+                disputeFlagged: !returnInspectionMatches,
+                disputeNotes: !returnInspectionMatches ? returnDisputeNotes : undefined,
+                disputeStatus: !returnInspectionMatches ? 'opened' : 'none'
+              });
+              setReturnCheckSubmitted(true);
+            }}
+            className="space-y-3.5 text-xs"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <label className="flex items-center gap-2.5 p-3 rounded-2xl bg-[#FFF9F3] border border-gray-200 cursor-pointer hover:bg-[#FFF0E6]">
+                <input
+                  type="checkbox"
+                  checked={returnWaterFilled}
+                  onChange={(e) => setReturnWaterFilled(e.target.checked)}
+                  className="rounded text-[#EE8267] w-4 h-4"
+                />
+                <span className="font-semibold text-gray-800">Fresh water bowl filled</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 p-3 rounded-2xl bg-[#FFF9F3] border border-gray-200 cursor-pointer hover:bg-[#FFF0E6]">
+                <input
+                  type="checkbox"
+                  checked={returnFoodMatches}
+                  onChange={(e) => setReturnFoodMatches(e.target.checked)}
+                  className="rounded text-[#EE8267] w-4 h-4"
+                />
+                <span className="font-semibold text-gray-800">Food matches portion</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 p-3 rounded-2xl bg-[#FFF9F3] border border-gray-200 cursor-pointer hover:bg-[#FFF0E6]">
+                <input
+                  type="checkbox"
+                  checked={returnReliefNoted}
+                  onChange={(e) => setReturnReliefNoted(e.target.checked)}
+                  className="rounded text-[#EE8267] w-4 h-4"
+                />
+                <span className="font-semibold text-gray-800">Relief / walk verified</span>
+              </label>
+            </div>
+
+            {/* Pet Demeanor */}
+            <div className="p-3 rounded-2xl bg-[#FFF9F3] border border-gray-200 space-y-2">
+              <span className="font-semibold text-[#38223A] block">
+                {activePet.name}'s Demeanor Upon Your Return:
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'calm_happy', label: 'Calm & Contented 😊' },
+                  { id: 'anxious', label: 'Restless / Anxious 😟' },
+                  { id: 'distressed', label: 'Lethargic / Distressed 🚨' }
+                ].map((d) => (
+                  <button
+                    type="button"
+                    key={d.id}
+                    onClick={() => setReturnDemeanor(d.id as any)}
+                    className={`py-2 px-1 text-center rounded-xl font-bold border transition text-xs ${
+                      returnDemeanor === d.id
+                        ? 'bg-[#EE8267] text-white border-[#EE8267] shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Match vs Dispute Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FFF0E6]/50 border border-[#EE8267]/30">
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-[#EE8267]" />
+                <span className="font-bold text-[#38223A]">
+                  Physical check matches helper's reported execution?
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReturnInspectionMatches(true)}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1 ${
+                    returnInspectionMatches
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-white text-gray-600 border border-gray-200'
+                  }`}
+                >
+                  <ThumbsUp className="w-3.5 h-3.5" />
+                  <span>Matches (Yes)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReturnInspectionMatches(false)}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1 ${
+                    !returnInspectionMatches
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'bg-white text-gray-600 border border-gray-200'
+                  }`}
+                >
+                  <ThumbsDown className="w-3.5 h-3.5" />
+                  <span>Mismatch (Dispute)</span>
+                </button>
+              </div>
+            </div>
+
+            {!returnInspectionMatches && (
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 space-y-2">
+                <span className="text-xs font-bold text-rose-900 block">
+                  Describe Care Gap or Inspection Discrepancy:
+                </span>
+                <textarea
+                  rows={2}
+                  value={returnDisputeNotes}
+                  onChange={(e) => setReturnDisputeNotes(e.target.value)}
+                  placeholder="e.g. Water bowl completely dry; front door unlatched; meal pouch unopened..."
+                  className="w-full p-2.5 rounded-xl border border-rose-300 bg-white text-xs text-rose-950 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-2.5 rounded-2xl bg-[#EE8267] text-white font-bold text-xs hover:bg-[#e06f52] shadow-xs flex items-center justify-center gap-1.5 transition"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Record Owner Return Inspection</span>
+            </button>
+          </form>
+        )}
       </div>
 
       {/* QUICK EMERGENCY BAR */}

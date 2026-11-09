@@ -24,9 +24,13 @@ import { EmergencyCardView } from './components/owner/EmergencyCardView';
 import { HealthRemindersView } from './components/owner/HealthRemindersView';
 import { CareHistoryView } from './components/owner/CareHistoryView';
 import { PetRegistrationWizard } from './components/owner/PetRegistrationWizard';
+import { OwnerMeView } from './components/owner/OwnerMeView';
 
 // Helper View
 import { HelperWhatsAppView } from './components/helper/HelperWhatsAppView';
+
+// Crèche Operator View
+import { CrecheDashboard } from './components/creche/CrecheDashboard';
 
 // Admin View
 import { AdminDashboard } from './components/admin/AdminDashboard';
@@ -104,6 +108,7 @@ const AppContent: React.FC = () => {
                 {currentTab === 'emergency' && <EmergencyCardView />}
                 {currentTab === 'health' && <HealthRemindersView />}
                 {currentTab === 'history' && <CareHistoryView />}
+                {currentTab === 'me' && <OwnerMeView onNavigateTab={setCurrentTab} />}
               </>
             )}
           </main>
@@ -117,7 +122,14 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      {/* ROLE 3: ADMIN DESKTOP DASHBOARD */}
+      {/* ROLE 3: CRÈCHE OPERATOR EXPERIENCE (Desktop Dashboard) */}
+      {role === 'creche_operator' && (
+        <div className="flex-1 flex flex-col">
+          <CrecheDashboard />
+        </div>
+      )}
+
+      {/* ROLE 4: ADMIN DESKTOP DASHBOARD */}
       {role === 'admin' && (
         <div className="flex-1 flex flex-col">
           <AdminDashboard />
