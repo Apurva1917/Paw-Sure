@@ -1,0 +1,8 @@
+{
+  "name": "Pawsure",
+  "description": "Be sure, whoever's caring. Responsive PWA for verified pet care, routine tracking, backup sitter network and caretaker coordination.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

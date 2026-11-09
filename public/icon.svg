@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="pawGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EE8267"/>
+      <stop offset="100%" stop-color="#E26D50"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="#FFF0E6"/>
+  
+  <!-- Outer Heart Shield -->
+  <path d="M256 80 C320 30, 430 70, 430 180 C430 290, 290 390, 256 430 C222 390, 82 290, 82 180 C82 70, 192 30, 256 80 Z" fill="#F3D7EA" opacity="0.6"/>
+  
+  <!-- Main Paw Pad -->
+  <ellipse cx="256" cy="275" rx="72" ry="58" fill="url(#pawGrad)" />
+  
+  <!-- Toe Pads -->
+  <circle cx="160" cy="180" r="30" fill="url(#pawGrad)" />
+  <circle cx="225" cy="140" r="32" fill="url(#pawGrad)" />
+  <circle cx="287" cy="140" r="32" fill="url(#pawGrad)" />
+  <circle cx="352" cy="180" r="30" fill="url(#pawGrad)" />
+
+  <!-- Checkmark verification badge -->
+  <circle cx="360" cy="350" r="48" fill="#10B981" />
+  <path d="M342 350 L354 362 L380 336" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

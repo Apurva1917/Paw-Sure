@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-primary: #EE8267;
+    --color-lavender: #A78BFA;
+    --color-soft-peach: #FFF0E6;
+    --color-soft-pink: #F3D7EA;
+    --color-bg-cream: #FFF9F3;
+    --color-dark-text: #38223A;
+    --color-confirmed: #10B981;
+    --color-likely: #F59E0B;
+    --color-not-confirmed: #EF4444;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #FFF9F3;
+    color: #38223A;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+}
+
+/* Custom Scrollbar for smooth mobile/desktop feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(167, 139, 250, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(238, 130, 103, 0.6);
+}
+
+/* Safe area padding for mobile PWA bottom navigation */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0.5rem);
+}
