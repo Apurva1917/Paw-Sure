@@ -54,7 +54,13 @@ export const RoleSwitcher: React.FC = () => {
               return (
                 <button
                   key={r.id}
-                  onClick={() => setRole(r.id)}
+                  onClick={() => {
+                    if (r.id === 'admin' && (!auth.isAuthenticated || auth.role !== 'admin' || !auth.mfaVerified)) {
+                      alert('Access Denied: Admin Console requires verified staff credentials and MFA token. Please authenticate via the Staff Ops login view.');
+                      return;
+                    }
+                    setRole(r.id);
+                  }}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
                     active
                       ? 'bg-[#EE8267] text-white shadow-sm'

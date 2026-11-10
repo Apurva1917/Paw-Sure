@@ -619,6 +619,8 @@ export interface AuthUser {
   mfaVerified?: boolean;
   preferredLanguage?: 'en' | 'hi' | 'kn' | 'ta';
   interfaceMode?: 'smartphone' | 'basic_phone';
+  token?: string; // Server session token
+  householdId?: string;
 }
 
 export interface MissedCallOrIVRLog {

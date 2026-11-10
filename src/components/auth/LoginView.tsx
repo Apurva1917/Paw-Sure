@@ -21,17 +21,19 @@ import {
   HeartHandshake,
   Building2,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 
 export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSuccessfulLogin }) => {
-  const { loginOwner, loginHelper, loginCrecheOperator, loginAdmin, setRole } = usePawsure();
+  const { loginOwner, loginHelper, loginCrecheOperator, loginAdmin, requestOtp } = usePawsure();
   const [selectedRole, setSelectedRole] = useState<Role>('owner');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [otpNotice, setOtpNotice] = useState<string | null>(null);
 
   // Owner Form
   const [ownerPhone, setOwnerPhone] = useState('+91 98450 11223');
-  const [ownerOtp, setOwnerOtp] = useState('4829');
-  const [ownerOtpSent, setOwnerOtpSent] = useState(true);
+  const [ownerOtp, setOwnerOtp] = useState('482910');
 
   // Helper Form
   const [helperPhone, setHelperPhone] = useState('+91 98765 43210');
@@ -44,33 +46,70 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
   const [crechePhone, setCrechePhone] = useState('+91 99001 22334');
   const [crecheManager, setCrecheManager] = useState('Arjun Mehta');
 
-  // Admin Form
+  // Admin Form (Staff Credentials)
   const [adminStaffId, setAdminStaffId] = useState('OPS-LEAD-774');
-  const [adminPassword, setAdminPassword] = useState('••••••••••••');
+  const [adminPassword, setAdminPassword] = useState('PawsureAdmin@2026!Secured');
   const [adminMfa, setAdminMfa] = useState('782910');
+
+  const switchTab = (tab: Role) => {
+    setSelectedRole(tab);
+    setAuthError(null);
+    setOtpNotice(null);
+  };
+
+  const handleRequestOtp = () => {
+    setAuthError(null);
+    const res = requestOtp(ownerPhone, 'owner');
+    if (res.success && res.simulatedOtp) {
+      setOwnerOtp(res.simulatedOtp);
+      setOtpNotice(`Simulated SMS Sent: 6-digit OTP is ${res.simulatedOtp}. Valid for 5 minutes.`);
+    } else {
+      setAuthError(res.message);
+    }
+  };
 
   const handleOwnerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loginOwner(ownerPhone, ownerOtp);
-    onSuccessfulLogin?.();
+    setAuthError(null);
+    const res = loginOwner(ownerPhone, ownerOtp);
+    if (res.success) {
+      onSuccessfulLogin?.();
+    } else {
+      setAuthError(res.error || 'Authentication failed: Invalid OTP');
+    }
   };
 
   const handleHelperSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loginHelper(helperPhone, helperLang, helperMode, helperConsent);
-    onSuccessfulLogin?.();
+    setAuthError(null);
+    const res = loginHelper(helperPhone, helperLang, helperMode, helperConsent);
+    if (res.success) {
+      onSuccessfulLogin?.();
+    } else {
+      setAuthError(res.error || 'Caretaker authentication failed');
+    }
   };
 
   const handleCrecheSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loginCrecheOperator(crecheFacilityId, crechePhone, crecheManager);
-    onSuccessfulLogin?.();
+    setAuthError(null);
+    const res = loginCrecheOperator(crecheFacilityId, crechePhone, crecheManager);
+    if (res.success) {
+      onSuccessfulLogin?.();
+    } else {
+      setAuthError(res.error || 'Crèche operator authentication failed');
+    }
   };
 
   const handleAdminSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loginAdmin(adminStaffId, adminPassword, adminMfa);
-    onSuccessfulLogin?.();
+    setAuthError(null);
+    const res = loginAdmin(adminStaffId, adminPassword, adminMfa);
+    if (res.success) {
+      onSuccessfulLogin?.();
+    } else {
+      setAuthError(res.error || 'Staff authentication failed: Invalid credentials or MFA token');
+    }
   };
 
   return (
@@ -97,7 +136,7 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
           <div className="grid grid-cols-4 gap-1 bg-[#FFF9F3] p-1.5 rounded-2xl border border-gray-100">
             <button
               type="button"
-              onClick={() => setSelectedRole('owner')}
+              onClick={() => switchTab('owner')}
               className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 ${
                 selectedRole === 'owner'
                   ? 'bg-[#EE8267] text-white shadow-xs'
@@ -109,7 +148,7 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
             </button>
             <button
               type="button"
-              onClick={() => setSelectedRole('helper')}
+              onClick={() => switchTab('helper')}
               className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 ${
                 selectedRole === 'helper'
                   ? 'bg-[#EE8267] text-white shadow-xs'
@@ -121,7 +160,7 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
             </button>
             <button
               type="button"
-              onClick={() => setSelectedRole('creche_operator')}
+              onClick={() => switchTab('creche_operator')}
               className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 ${
                 selectedRole === 'creche_operator'
                   ? 'bg-[#EE8267] text-white shadow-xs'
@@ -133,7 +172,7 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
             </button>
             <button
               type="button"
-              onClick={() => setSelectedRole('admin')}
+              onClick={() => switchTab('admin')}
               className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center gap-1 ${
                 selectedRole === 'admin'
                   ? 'bg-[#38223A] text-white shadow-xs'
@@ -146,7 +185,32 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
           </div>
         </div>
 
-        {/* EXPERIENCE 1: PET OWNER (OTP) */}
+        {/* High-Visibility Error Banner */}
+        {authError && (
+          <div role="alert" className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 shadow-xs">
+            <AlertCircle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+            <div>
+              <strong className="font-bold block text-rose-900">Security / Authentication Error</strong>
+              <span>{authError}</span>
+            </div>
+          </div>
+        )}
+
+        {/* OTP Simulated Dispatch Notice */}
+        {otpNotice && (
+          <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2 shadow-xs">
+            <span>{otpNotice}</span>
+            <button
+              type="button"
+              onClick={() => setOwnerOtp('482910')}
+              className="text-[11px] font-bold text-[#EE8267] hover:underline shrink-0"
+            >
+              Fill 482910
+            </button>
+          </div>
+        )}
+
+        {/* EXPERIENCE 1: PET OWNER (6-DIGIT OTP) */}
         {selectedRole === 'owner' && (
           <form onSubmit={handleOwnerSubmit} className="space-y-4">
             <div className="space-y-1">
@@ -175,19 +239,29 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block font-semibold text-gray-700">One-Time Password (OTP)</label>
-                  <span className="text-[11px] text-[#EE8267] font-semibold">Demo Code: 4829</span>
+                  <label className="block font-semibold text-gray-700">6-Digit One-Time Password (OTP)</label>
+                  <button
+                    type="button"
+                    onClick={handleRequestOtp}
+                    className="text-[11px] text-[#EE8267] font-semibold hover:underline"
+                  >
+                    Request 6-Digit Code
+                  </button>
                 </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
                   <input
                     type="text"
-                    maxLength={4}
+                    maxLength={6}
                     value={ownerOtp}
                     onChange={(e) => setOwnerOtp(e.target.value)}
+                    placeholder="482910"
                     className="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-gray-200 font-mono tracking-widest text-center text-sm font-bold focus:outline-none focus:border-[#EE8267]"
                   />
                 </div>
+                <span className="text-[10px] text-gray-400 mt-1 block">
+                  Strictly validates numeric 6-digit code. Arbitrary 4-character codes will be rejected.
+                </span>
               </div>
             </div>
 
@@ -195,7 +269,7 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
               type="submit"
               className="w-full py-3 rounded-2xl bg-[#EE8267] text-white text-xs font-bold hover:bg-[#e06f52] transition shadow-md flex items-center justify-center gap-1.5"
             >
-              <span>Verify & Continue as Neha</span>
+              <span>Verify OTP & Continue as Neha</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
@@ -450,6 +524,12 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
                     className="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-gray-200 font-mono text-center tracking-widest text-base font-bold focus:outline-none focus:border-[#38223A]"
                   />
                 </div>
+                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[11px] text-gray-600 mt-2">
+                  <div className="font-bold text-[#38223A] mb-0.5">Authorized Demo Staff Credentials:</div>
+                  <div>Staff ID: <code className="bg-gray-200 px-1 py-0.5 rounded text-[#38223A] font-mono">OPS-LEAD-774</code></div>
+                  <div>Password: <code className="bg-gray-200 px-1 py-0.5 rounded text-[#38223A] font-mono">PawsureAdmin@2026!Secured</code></div>
+                  <div>MFA TOTP: <code className="bg-gray-200 px-1 py-0.5 rounded text-[#38223A] font-mono">782910</code></div>
+                </div>
               </div>
             </div>
 
@@ -463,9 +543,9 @@ export const LoginView: React.FC<{ onSuccessfulLogin?: () => void }> = ({ onSucc
           </form>
         )}
 
-        {/* Development Auto-fill Note */}
+        {/* Development Sandbox Security Notice */}
         <SimulatedBanner
-          label="SIMULATED: All 4 persona credentials are provided for demo testing. Real backend sessions are enforced via strict role policies."
+          label="SIMULATED AUTHENTICATION SANDBOX — ZERO ACCESS TO REAL USER DATA. Rate limiting, replay protection, and affirmative consent enforced."
         />
       </div>
     </div>

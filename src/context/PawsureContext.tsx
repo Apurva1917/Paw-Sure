@@ -27,6 +27,7 @@ import {
 import { PawsureVerificationEngine } from '../services/verificationEngine';
 import { pawsureRepository } from '../services/pawsureRepository';
 import { providerAdapters } from '../services/providerAdapters';
+import { securityEngine } from '../server/auth';
 import {
   INITIAL_PETS,
   INITIAL_HELPER,
@@ -42,12 +43,13 @@ import {
 
 interface PawsureContextType {
   role: Role;
-  setRole: (role: Role) => void;
+  setRole: (role: Role) => boolean;
   auth: AuthUser;
-  loginOwner: (phone: string, otp: string) => boolean;
-  loginHelper: (phone: string, lang: 'en' | 'hi' | 'kn' | 'ta', mode: 'smartphone' | 'basic_phone', consent: boolean) => boolean;
-  loginCrecheOperator: (facilityId: string, operatorPhone: string, managerName: string) => boolean;
-  loginAdmin: (staffId: string, securityKey: string, mfaCode: string) => boolean;
+  requestOtp: (phone: string, targetRole?: Role) => { success: boolean; message: string; simulatedOtp?: string };
+  loginOwner: (phone: string, otp: string) => { success: boolean; error?: string };
+  loginHelper: (phone: string, lang: 'en' | 'hi' | 'kn' | 'ta', mode: 'smartphone' | 'basic_phone', consent: boolean) => { success: boolean; error?: string };
+  loginCrecheOperator: (facilityId: string, operatorPhone: string, managerName: string) => { success: boolean; error?: string };
+  loginAdmin: (staffId: string, securityKey: string, mfaCode: string) => { success: boolean; error?: string };
   logout: () => void;
 
   household: Household;
@@ -132,54 +134,42 @@ const STORAGE_KEY = 'pawsure_demo_state_v2';
 
 export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Authentication State
+  // DEFECT FIX 5: Remove automatic authentication of new browser sessions.
+  // DEFECT FIX 9: Do not store passwords or session tokens in localStorage.
   const [auth, setAuth] = useState<AuthUser>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_auth`);
-    return saved
-      ? JSON.parse(saved)
-      : {
-          isAuthenticated: true,
-          role: 'owner',
-          userId: 'owner-neha-1',
-          name: 'Neha Kapoor',
-          phone: '+91 98450 11223'
-        };
+    try {
+      const token = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('pawsure_session_token') : null;
+      if (token) {
+        const serverSession = securityEngine.getSession(token);
+        if (serverSession) {
+          return {
+            isAuthenticated: true,
+            token: serverSession.token,
+            role: serverSession.role,
+            userId: serverSession.userId,
+            name: serverSession.name,
+            phone: serverSession.phone,
+            email: serverSession.email,
+            householdId: serverSession.householdId,
+            facilityId: serverSession.facilityId,
+            mfaVerified: serverSession.mfaVerified
+          };
+        }
+      }
+    } catch {
+      // Fallback if sessionStorage is disabled
+    }
+    // New browser session defaults to unauthenticated
+    return {
+      isAuthenticated: false,
+      role: 'owner',
+      userId: '',
+      name: ''
+    };
   });
 
   const [role, setRoleState] = useState<Role>(auth.role || 'owner');
 
-  const setRole = (newRole: Role) => {
-    setRoleState(newRole);
-    setAuth((prev) => ({
-      ...prev,
-      role: newRole,
-      userId:
-        newRole === 'owner'
-          ? 'owner-neha-1'
-          : newRole === 'helper'
-          ? 'helper-sunita-1'
-          : newRole === 'creche_operator'
-          ? 'op-creche-blr-01'
-          : 'admin-operator-1',
-      name:
-        newRole === 'owner'
-          ? 'Neha Kapoor'
-          : newRole === 'helper'
-          ? 'Sunita Sharma'
-          : newRole === 'creche_operator'
-          ? 'Arjun Mehta (Happy Paws)'
-          : 'Platform Operations Admin',
-      phone:
-        newRole === 'owner'
-          ? '+91 98450 11223'
-          : newRole === 'helper'
-          ? '+91 98765 43210'
-          : newRole === 'creche_operator'
-          ? '+91 99001 22334'
-          : undefined,
-      facilityId: newRole === 'creche_operator' ? 'creche-blr-01' : undefined,
-      email: newRole === 'admin' ? 'ops.lead@pawsure.internal' : undefined
-    }));
-  };
 
   // Strict Scoped Repository States
   const [household, setHousehold] = useState<Household>(() => pawsureRepository.getState().households[0]);
@@ -255,13 +245,24 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ownerApproved: false
   });
 
-  // Sync to localStorage
+  // DEFECT FIX 9: Do not store passwords, session tokens, or sensitive credentials in localStorage
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_auth`, JSON.stringify(auth));
+    // Session token is strictly kept in sessionStorage and server memory
   }, [auth]);
+
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_pets`, JSON.stringify(pets));
+    // Mask door/lockbox codes so cleartext passcodes are never stored in localStorage
+    const sanitizedPets = pets.map((p) => ({
+      ...p,
+      securityHomeCode: '••••'
+    }));
+    try {
+      localStorage.setItem(`${STORAGE_KEY}_pets`, JSON.stringify(sanitizedPets));
+    } catch {
+      // quota/storage safe
+    }
   }, [pets]);
+
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY}_tasks`, JSON.stringify(tasks));
   }, [tasks]);
@@ -309,20 +310,65 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setAuditLogs((prev) => [newLog, ...prev]);
   };
 
-  // Phase 1: Authentication Handlers
-  const loginOwner = (phone: string, otp: string): boolean => {
-    if (otp !== '4829' && otp.length < 4) return false;
-    const session: AuthUser = {
-      isAuthenticated: true,
-      role: 'owner',
-      userId: 'owner-neha-1',
-      name: 'Neha Kapoor',
-      phone: phone || '+91 98450 11223'
-    };
-    setAuth(session);
-    setRoleState('owner');
-    addAuditLog('Neha Kapoor', 'owner', 'Owner Logged In', `Authenticated via simulated OTP on ${session.phone}`, 'auth');
+  // DEFECT FIX 4: Prevent a user from accessing Admin simply by switching roles.
+  // Role escalation to Admin strictly requires verified staff authentication and MFA.
+  const setRole = (newRole: Role): boolean => {
+    if (newRole === 'admin') {
+      const hasValidAdminAuth = auth.isAuthenticated && auth.role === 'admin' && auth.mfaVerified;
+      if (!hasValidAdminAuth) {
+        console.warn('[Security] Unauthorized role escalation to Admin rejected. Valid staff authentication and MFA required.');
+        addAuditLog(
+          auth.name || 'Anonymous Session',
+          auth.role || 'system',
+          'Role Escalation Denied',
+          'Attempted direct privilege escalation to Admin Console without verified staff credentials/MFA.',
+          'safety'
+        );
+        return false;
+      }
+    }
+    setRoleState(newRole);
     return true;
+  };
+
+  const requestOtp = (phone: string, targetRole: Role = 'owner') => {
+    return securityEngine.requestOtp(phone, targetRole);
+  };
+
+  // DEFECT FIX 1 & 2: Server-validated 6-digit numeric OTP authentication; reject arbitrary 4-char OTPs
+  const loginOwner = (phone: string, otp: string): { success: boolean; error?: string } => {
+    const result = securityEngine.verifyOtp(phone, otp);
+    if (!result.success || !result.session) {
+      addAuditLog(
+        phone || 'Unknown',
+        'owner',
+        'Authentication Failed',
+        `Owner OTP verification rejected: ${result.message}`,
+        'auth'
+      );
+      return { success: false, error: result.message };
+    }
+    const session = result.session;
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('pawsure_session_token', session.token);
+      }
+    } catch {
+      // ignore
+    }
+    const authUser: AuthUser = {
+      isAuthenticated: true,
+      token: session.token,
+      role: 'owner',
+      userId: session.userId,
+      name: session.name,
+      phone: session.phone,
+      householdId: session.householdId
+    };
+    setAuth(authUser);
+    setRoleState('owner');
+    addAuditLog('Neha Kapoor', 'owner', 'Owner Authenticated', `Server verified 6-digit OTP for ${session.phone}. Token issued.`, 'auth');
+    return { success: true };
   };
 
   const loginHelper = (
@@ -330,17 +376,30 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     lang: 'en' | 'hi' | 'kn' | 'ta',
     mode: 'smartphone' | 'basic_phone',
     consent: boolean
-  ): boolean => {
-    const session: AuthUser = {
+  ): { success: boolean; error?: string } => {
+    const result = securityEngine.loginHelper(phone, lang, mode, consent);
+    if (!result.success || !result.session) {
+      return { success: false, error: result.message };
+    }
+    const session = result.session;
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('pawsure_session_token', session.token);
+      }
+    } catch {
+      // ignore
+    }
+    const authUser: AuthUser = {
       isAuthenticated: true,
+      token: session.token,
       role: 'helper',
-      userId: 'helper-sunita-1',
-      name: 'Sunita Sharma',
-      phone: phone || '+91 98765 43210',
+      userId: session.userId,
+      name: session.name,
+      phone: session.phone,
       preferredLanguage: lang,
       interfaceMode: mode
     };
-    setAuth(session);
+    setAuth(authUser);
     setRoleState('helper');
     setHelper((prev) => ({
       ...prev,
@@ -349,60 +408,108 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       consentAgreed: consent
     }));
     addAuditLog(
-      'Sunita Sharma',
+      session.name,
       'helper',
       'Caretaker Logged In',
       `Language: ${lang.toUpperCase()}, Interface: ${mode}, Consent: ${consent ? 'Agreed' : 'Pending'}`,
       'auth'
     );
-    return true;
+    return { success: true };
   };
 
-  const loginAdmin = (staffId: string, securityKey: string, mfaCode: string): boolean => {
-    if (!staffId.trim()) return false;
-    const session: AuthUser = {
+  // DEFECT FIX 3: Staff Admin Login strictly requires OPS-LEAD-774, password and 6-digit MFA
+  const loginAdmin = (staffId: string, securityKey: string, mfaCode: string): { success: boolean; error?: string } => {
+    const result = securityEngine.loginAdmin(staffId, securityKey, mfaCode);
+    if (!result.success || !result.session) {
+      addAuditLog(
+        staffId || 'Unknown Staff',
+        'admin',
+        'Admin Access Denied',
+        `Unauthorized staff login attempt: ${result.message}`,
+        'safety'
+      );
+      return { success: false, error: result.message };
+    }
+    const session = result.session;
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('pawsure_session_token', session.token);
+      }
+    } catch {
+      // ignore
+    }
+    const authUser: AuthUser = {
       isAuthenticated: true,
+      token: session.token,
       role: 'admin',
-      userId: staffId,
-      name: 'Platform Operations Admin',
-      email: `${staffId.toLowerCase().replace(/\s+/g, '.')}@pawsure.internal`,
+      userId: session.userId,
+      name: session.name,
+      email: session.email,
       mfaVerified: true
     };
-    setAuth(session);
+    setAuth(authUser);
     setRoleState('admin');
-    addAuditLog('Admin Operator', 'admin', 'Staff Authenticated', `MFA verified for staff ID #${staffId}`, 'auth');
-    return true;
+    addAuditLog('Admin Operator', 'admin', 'Staff Authenticated', `MFA verified for staff ID #${staffId}. Admin token issued.`, 'auth');
+    return { success: true };
   };
 
+  // DEFECT FIX 10: Ensure logout invalidates authenticated access on server and client
   const logout = () => {
+    if (auth.token) {
+      securityEngine.revokeSession(auth.token);
+    }
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('pawsure_session_token');
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`${STORAGE_KEY}_auth`);
+      }
+    } catch {
+      // ignore
+    }
     setAuth({
       isAuthenticated: false,
       role: 'owner',
       userId: '',
       name: ''
     });
-    addAuditLog('User', role, 'Logged Out', 'Session terminated', 'auth');
+    setRoleState('owner');
+    addAuditLog(auth.name || 'User', role, 'Logged Out', 'Session revoked and token invalidated on server', 'auth');
   };
 
-  const loginCrecheOperator = (facilityId: string, operatorPhone: string, managerName: string): boolean => {
-    const session: AuthUser = {
+  const loginCrecheOperator = (facilityId: string, operatorPhone: string, managerName: string): { success: boolean; error?: string } => {
+    const result = securityEngine.loginCreche(facilityId, operatorPhone, managerName);
+    if (!result.success || !result.session) {
+      return { success: false, error: result.message };
+    }
+    const session = result.session;
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('pawsure_session_token', session.token);
+      }
+    } catch {
+      // ignore
+    }
+    const authUser: AuthUser = {
       isAuthenticated: true,
+      token: session.token,
       role: 'creche_operator',
-      userId: `op-${facilityId || 'creche-blr-01'}`,
-      name: managerName || 'Arjun Mehta',
-      phone: operatorPhone || '+91 99001 22334',
-      facilityId: facilityId || 'creche-blr-01'
+      userId: session.userId,
+      name: session.name,
+      phone: session.phone,
+      facilityId: session.facilityId
     };
-    setAuth(session);
+    setAuth(authUser);
     setRoleState('creche_operator');
     addAuditLog(
-      managerName || 'Arjun Mehta',
+      session.name,
       'creche_operator',
       'Crèche Operator Authenticated',
       `Signed in to manage facility #${facilityId || 'creche-blr-01'}.`,
       'auth'
     );
-    return true;
+    return { success: true };
   };
 
   const submitOwnerReturnCheck = (checkData: Omit<OwnerReturnCheck, 'id'>) => {
@@ -427,11 +534,13 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateHelperConsent = (agreed: boolean, status: 'active' | 'withdrawn' | 'paused' = 'active') => {
+    securityEngine.updateCaregiverConsent('helper-sunita-1', agreed, status, !agreed || status === 'withdrawn' ? 'Caregiver revoked consent' : undefined);
     setHelperConsent((prev) => ({
       ...prev,
       agreed,
       status,
-      timestamp: `${simulatedClock} Today`
+      timestamp: `${simulatedClock} Today`,
+      withdrawalReason: !agreed || status === 'withdrawn' ? 'Caregiver revoked consent' : undefined
     }));
     setHelper((prev) => ({
       ...prev,
@@ -966,8 +1075,9 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setDemoStep(step);
     switch (step) {
       case 1:
-        // Neha logs in
-        loginOwner('+91 98450 11223', '4829');
+        // Neha requests and logs in with verified 6-digit OTP
+        requestOtp('+91 98450 11223', 'owner');
+        loginOwner('+91 98450 11223', '482910');
         setRoleState('owner');
         break;
       case 2:
@@ -1058,7 +1168,21 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // DEFECT FIX 8: Require affirmative caretaker consent before activating care tasks
   const helperMarkTaskDone = (taskId: string, note?: string) => {
+    const consentCheck = securityEngine.canActivateCareTasks('helper-sunita-1');
+    if (!consentCheck.allowed || !helperConsent.agreed || helperConsent.status !== 'active') {
+      alert(`Action Blocked: ${consentCheck.reason || 'Affirmative caretaker consent is required before recording care tasks.'}`);
+      addAuditLog(
+        helper.name,
+        'helper',
+        'Task Action Blocked',
+        `Attempted task update without active affirmative consent: ${consentCheck.reason}`,
+        'safety'
+      );
+      return;
+    }
+
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
@@ -1088,6 +1212,19 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     evidenceType: 'photo' | 'voice' | 'code' | 'ivr_keypad',
     details: { url?: string; caption?: string; code?: string }
   ) => {
+    const consentCheck = securityEngine.canActivateCareTasks('helper-sunita-1');
+    if (!consentCheck.allowed || !helperConsent.agreed || helperConsent.status !== 'active') {
+      alert(`Evidence Submission Blocked: ${consentCheck.reason || 'Affirmative caretaker consent is required before submitting evidence.'}`);
+      addAuditLog(
+        helper.name,
+        'helper',
+        'Evidence Submission Blocked',
+        `Attempted evidence submission without active affirmative consent: ${consentCheck.reason}`,
+        'safety'
+      );
+      return;
+    }
+
     let wasVerified = false;
     let finalStatusDesc = 'Likely';
 
@@ -1329,6 +1466,7 @@ export const PawsureProvider: React.FC<{ children: React.ReactNode }> = ({ child
         role,
         setRole,
         auth,
+        requestOtp,
         loginOwner,
         loginHelper,
         loginCrecheOperator,

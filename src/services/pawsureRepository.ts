@@ -32,8 +32,10 @@ import {
   NotificationAttempt,
   AuditLogItem,
   CaregiverRating,
-  HelperConsent
+  HelperConsent,
+  EscalationItem
 } from '../types/pawsure';
+import { INITIAL_ESCALATIONS } from '../data/mockData';
 
 const REPO_VERSION = 'pawsure_repo_v3';
 
@@ -57,6 +59,7 @@ export interface RepositoryState {
   notifications: NotificationAttempt[];
   auditLogs: AuditLogItem[];
   ratings: CaregiverRating[];
+  escalations: EscalationItem[];
 }
 
 export class PawsureRepository {
@@ -92,9 +95,28 @@ export class PawsureRepository {
     return seeded;
   }
 
+  public sanitizeForStorage(state?: RepositoryState): RepositoryState {
+    const target = state || this.getState();
+    return {
+      ...target,
+      households: (target.households || []).map((h) => ({
+        ...h,
+        securityHomeCode: '••••',
+        gateCode: '••••',
+        emergencyPasscode: '••••'
+      })),
+      pets: (target.pets || []).map((p) => ({
+        ...p,
+        securityHomeCode: '••••'
+      }))
+    };
+  }
+
   private persist(state: RepositoryState): void {
     try {
-      localStorage.setItem(REPO_VERSION, JSON.stringify(state));
+      // SECURITY FIX (Defect 9): Never store raw access codes or sensitive credentials in localStorage
+      const sanitized = this.sanitizeForStorage(state);
+      localStorage.setItem(REPO_VERSION, JSON.stringify(sanitized));
     } catch {
       // Ignore if quota exceeded
     }
@@ -790,7 +812,8 @@ export class PawsureRepository {
       rewardsLedger,
       notifications,
       auditLogs,
-      ratings: []
+      ratings: [],
+      escalations: INITIAL_ESCALATIONS
     };
   }
 }
