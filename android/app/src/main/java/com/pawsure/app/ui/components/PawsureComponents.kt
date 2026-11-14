@@ -1,26 +1,32 @@
 package com.pawsure.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.Sos
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.pawsure.app.R
 import com.pawsure.app.domain.model.*
 import com.pawsure.app.ui.theme.PawsureColors
 
@@ -186,23 +192,32 @@ fun PetProfileCard(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(22.dp))
                     .background(PawsureColors.SoftPeachAccent)
             ) {
-                if (!pet.photoUrl.isNullOrBlank()) {
-                    AsyncImage(
+                val localRes = when (pet.photoResName) {
+                    "pet_bruno" -> R.drawable.pet_bruno
+                    "pet_luna" -> R.drawable.pet_luna
+                    "caregiver_walk" -> R.drawable.caregiver_walk
+                    else -> null
+                }
+                when {
+                    localRes != null -> Image(
+                        painter = painterResource(id = localRes),
+                        contentDescription = "${pet.name} photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    !pet.photoUrl.isNullOrBlank() -> AsyncImage(
                         model = pet.photoUrl,
                         contentDescription = "${pet.name} photo",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
-                } else {
-                    Icon(
-                        imageVector = Icons.Outlined.Pets,
-                        contentDescription = null,
-                        tint = PawsureColors.CharcoalText,
-                        modifier = Modifier.size(30.dp)
+                    else -> Cute3DPetIllustration(
+                        species = pet.species,
+                        size = 64.dp
                     )
                 }
             }
@@ -492,6 +507,88 @@ fun EvidenceCard(
     }
 }
 
+/**
+ * Pill-shaped horizontal category filter chip matching the reference yellow/ivory style.
+ */
+@Composable
+fun CategoryFilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: ImageVector? = null
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = if (selected) PawsureColors.VibrantYellow else PawsureColors.PureWhiteCard,
+        border = if (selected) null else BorderStroke(1.dp, PawsureColors.DividerSand),
+        shadowElevation = if (selected) 4.dp else 1.dp,
+        modifier = modifier.defaultMinSize(minHeight = 44.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = PawsureColors.CharcoalText,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold
+                ),
+                color = PawsureColors.CharcoalText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Always-accessible Emergency SOS pill button for Screen 2 and Screen 3.
+ */
+@Composable
+fun EmergencySosButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = PawsureColors.UrgentCoral,
+        shadowElevation = 4.dp,
+        modifier = modifier
+            .defaultMinSize(minHeight = 48.dp)
+            .semantics { contentDescription = "Emergency SOS assistance" }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Sos,
+                contentDescription = null,
+                tint = PawsureColors.PureWhiteCard,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = "SOS",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                color = PawsureColors.PureWhiteCard
+            )
+        }
+    }
+}
+
 data class BottomNavDestination(
     val route: String,
     val label: String,
@@ -499,7 +596,8 @@ data class BottomNavDestination(
 )
 
 /**
- * 9. BottomNavigationBar — Accessible Material 3 bottom bar in Pawsure cream & yellow styling.
+ * 9. BottomNavigationBar — Floating pill-shaped navigation bar with soft drop shadow
+ * and vibrant yellow active indicator matching the reference dashboard.
  */
 @Composable
 fun BottomNavigationBar(
@@ -508,38 +606,64 @@ fun BottomNavigationBar(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    NavigationBar(
-        containerColor = PawsureColors.PureWhiteCard,
-        contentColor = PawsureColors.CharcoalText,
+    Box(
         modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        destinations.forEach { dest ->
-            val selected = currentRoute == dest.route
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onNavigate(dest.route) },
-                icon = {
-                    Icon(
-                        imageVector = dest.icon,
-                        contentDescription = dest.label
-                    )
-                },
-                label = {
-                    Text(
-                        text = dest.label,
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = PawsureColors.CharcoalText,
-                    selectedTextColor = PawsureColors.CharcoalText,
-                    indicatorColor = PawsureColors.SoftYellow,
-                    unselectedIconColor = PawsureColors.MutedCharcoalText,
-                    unselectedTextColor = PawsureColors.MutedCharcoalText
+        Surface(
+            shape = RoundedCornerShape(30.dp),
+            color = PawsureColors.PureWhiteCard,
+            border = BorderStroke(1.dp, PawsureColors.DividerSand),
+            shadowElevation = 12.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 14.dp,
+                    shape = RoundedCornerShape(30.dp),
+                    ambientColor = PawsureColors.SoftShadowTint,
+                    spotColor = PawsureColors.SoftShadowTint
                 )
-            )
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+            ) {
+                destinations.forEach { dest ->
+                    val selected = currentRoute == dest.route
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(if (selected) PawsureColors.VibrantYellow else Color.Transparent)
+                            .clickable { onNavigate(dest.route) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = dest.icon,
+                            contentDescription = dest.label,
+                            tint = if (selected) PawsureColors.CharcoalText else PawsureColors.MutedCharcoalText,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = dest.label,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium
+                            ),
+                            color = if (selected) PawsureColors.CharcoalText else PawsureColors.MutedCharcoalText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
         }
     }
 }

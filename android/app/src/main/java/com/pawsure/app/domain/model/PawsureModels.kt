@@ -75,6 +75,8 @@ data class PetProfile(
     val breed: String,
     val ageLabel: String,
     val photoUrl: String? = null,
+    val photoResName: String? = null,
+    val societyName: String = "Green Glen Layout • Tower 4",
     val foodInstructions: String,
     val medicationInstructions: String,
     val vaccinationRecords: List<String> = emptyList(),

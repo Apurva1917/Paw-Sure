@@ -9,6 +9,7 @@
  */
 
 import express from 'express';
+import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { apiRouter } from './src/server/routes.ts';
@@ -37,12 +38,17 @@ app.get('/api/health', (req, res) => {
 
 async function startServer() {
   const isProduction = process.env.NODE_ENV === 'production';
+  const httpServer = http.createServer(app);
 
   if (!isProduction) {
     // Dynamic import of Vite for development middleware mode
     const { createServer } = await import('vite');
     const vite = await createServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        allowedHosts: true,
+        ws: { server: httpServer },
+      },
       appType: 'spa'
     });
     app.use(vite.middlewares);
@@ -57,7 +63,7 @@ async function startServer() {
 
   // Only start listening if not running under a test runner
   if (process.env.NODE_ENV !== 'test') {
-    app.listen(PORT, '0.0.0.0', () => {
+    httpServer.listen(PORT, '0.0.0.0', () => {
       console.log(`[Pawsure Server] Listening on http://0.0.0.0:${PORT} (Mode: ${isProduction ? 'production' : 'development'})`);
     });
   }

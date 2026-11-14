@@ -7,10 +7,13 @@ import androidx.compose.ui.graphics.Color
  * Aligned with the Pawsure Android MVP visual specification.
  */
 object PawsureColors {
-    // Primary Brand Surfaces & Accents
+    // Primary Brand Surfaces & Accents (Yellow, Ivory Cream, White & Charcoal)
     val WarmCreamBackground = Color(0xFFFFF9E8)
+    val IvoryCream = Color(0xFFFFFDF6)
     val VibrantYellow = Color(0xFFFFD21A)
+    val DeepMarigoldYellow = Color(0xFFF5BF00)
     val SoftYellow = Color(0xFFFFE875)
+    val PaleButterYellow = Color(0xFFFFF3BE)
     val CharcoalText = Color(0xFF202020)
     val MutedCharcoalText = Color(0xFF5A564C)
     val PureWhiteCard = Color(0xFFFFFFFF)
@@ -18,6 +21,7 @@ object PawsureColors {
     val UrgentCoral = Color(0xFFF47F73)
     val UrgentCoralSurface = Color(0xFFFFECEA)
     val DividerSand = Color(0xFFEFE6CF)
+    val SoftShadowTint = Color(0x1A3D2E00)
 
     // Evidence & Task Semantic Status Tokens
     val ConfirmedGreen = Color(0xFF1E8E5A)

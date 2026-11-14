@@ -15,9 +15,10 @@ import androidx.compose.ui.unit.sp
 val PawsureTypography = Typography(
     displaySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 30.sp,
+        lineHeight = 36.sp,
+        letterSpacing = (-0.5).sp,
         color = PawsureColors.CharcoalText
     ),
     headlineSmall = TextStyle(
@@ -25,13 +26,14 @@ val PawsureTypography = Typography(
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
+        letterSpacing = (-0.2).sp,
         color = PawsureColors.CharcoalText
     ),
     titleMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 17.sp,
-        lineHeight = 24.sp,
+        lineHeight = 23.sp,
         color = PawsureColors.CharcoalText
     ),
     bodyLarge = TextStyle(
@@ -44,14 +46,14 @@ val PawsureTypography = Typography(
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+        fontSize = 13.5.sp,
+        lineHeight = 19.sp,
         color = PawsureColors.MutedCharcoalText
     ),
     labelLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
+        fontSize = 15.sp,
         lineHeight = 20.sp,
         color = PawsureColors.CharcoalText
     ),
