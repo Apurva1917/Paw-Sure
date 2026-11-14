@@ -13,7 +13,7 @@
  * 7. In-memory session and credential isolation (no credentials in localStorage)
  */
 
-import { Role } from '../types/pawsure';
+import type { Role } from '../types/pawsure.ts';
 
 export interface ServerSession {
   token: string;

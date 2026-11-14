@@ -11,10 +11,10 @@
  * - Explicit session revocation on logout
  */
 
-import { Router, Request, Response, NextFunction } from 'express';
-import { securityEngine, ServerSession } from './auth';
-import { pawsureRepository } from '../services/pawsureRepository';
-import { Role } from '../types/pawsure';
+import { Router, type Request, type Response, type NextFunction } from 'express';
+import { securityEngine, type ServerSession } from './auth.ts';
+import { pawsureRepository } from '../services/pawsureRepository.ts';
+import type { Role } from '../types/pawsure.ts';
 
 // Extend Express Request to include authenticated user session
 export interface AuthenticatedRequest extends Request {

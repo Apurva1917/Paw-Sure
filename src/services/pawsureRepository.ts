@@ -13,7 +13,7 @@
  * - Clearly marked DEMO STORAGE (localStorage is not treated as secure production storage)
  */
 
-import {
+import type {
   Role,
   Household,
   Pet,
@@ -34,8 +34,8 @@ import {
   CaregiverRating,
   HelperConsent,
   EscalationItem
-} from '../types/pawsure';
-import { INITIAL_ESCALATIONS } from '../data/mockData';
+} from '../types/pawsure.ts';
+import { INITIAL_ESCALATIONS } from '../data/mockData.ts';
 
 const REPO_VERSION = 'pawsure_repo_v3';
 

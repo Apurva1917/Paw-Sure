@@ -1,4 +1,4 @@
-import {
+import type {
   Pet,
   HelperProfile,
   CareTask,
@@ -9,7 +9,7 @@ import {
   MissedCallOrIVRLog,
   OwnerRewardAccount,
   CaregiverRating
-} from '../types/pawsure';
+} from '../types/pawsure.ts';
 
 export const BRUNO_PHOTO = '/src/assets/images/pawsure_bruno_dog_1794051135301.jpg';
 export const LUNA_PHOTO = '/src/assets/images/pawsure_luna_cat_1794051136127.jpg';
